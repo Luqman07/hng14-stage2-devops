@@ -17,6 +17,11 @@ r = get_redis()
 
 QUEUE_NAME = os.getenv("QUEUE_NAME", "jobs")
 
+@app.get("/health")
+def health_check():
+    r.ping()  # Check if Redis is reachable
+    return {"status": "healthy"}
+
 @app.post("/jobs")
 def create_job():
     job_id = str(uuid.uuid4())

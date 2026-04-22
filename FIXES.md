@@ -1,128 +1,48 @@
+# FIXES.md
+
 ## api/main.py
-- Line 7: Hardcoded Redis host "localhost". Changed to use os.getenv('REDIS_HOST', 'localhost')
-- Line 7: Added Redis connection error handling with logging
-- Added /health endpoint for health checks
-- Added structured logging throughout
+- **Line 7**: Hardcoded Redis host `"localhost"`. Changed to `os.getenv('REDIS_HOST', 'redis')` so it resolves correctly inside Docker.
+- **Added**: `/health` endpoint required for container health checks and the `depends_on: condition: service_healthy` chain.
 
-File: api/main.py
-Line: 10
+## worker/worker.py
+- **Line 6**: Redis connection used `"localhost"`, which fails in Docker. Replaced with `os.getenv("REDIS_HOST", "redis")`.
+- **Line 6**: No Redis password support. Added `password=os.getenv("REDIS_PASSWORD", None)`.
+- **Line 15**: Hardcoded queue name `"job"` did not match the API's queue name `"jobs"`. Replaced with `os.getenv("QUEUE_NAME", "jobs")`.
+- **Line 13**: Infinite loop with no signal handling prevented graceful container shutdown. Added `SIGTERM`/`SIGINT` handlers and a `running` flag.
+- **Line 18**: Manual `.decode()` on Redis responses. Enabled `decode_responses=True` on the Redis client instead.
 
-Issue:
-Hardcoded queue name "job" could cause mismatch with worker configuration.
+## frontend/app.js
+- **Line 6**: Hardcoded API URL `"localhost"` breaks Docker networking. Replaced with `process.env.API_URL || "http://api:8000"`.
+- **Lines 11, 20**: Axios requests had no timeout, causing potential hangs. Added `timeout: 5000` via `axios.create`.
+- **Lines 13, 22**: Errors were silently swallowed. Added `err.message` in the JSON error response.
+- **Added**: `/health` route for container health checks.
+- **Line 27**: Hardcoded port `3000`. Replaced with `process.env.PORT || 3000`.
 
-Fix:
-Replaced with environment variable QUEUE_NAME with default "jobs".
+## frontend/eslintrc.json
+- **Filename**: File was named `eslintrc.json` (missing leading dot). ESLint cannot discover it without the dot. Renamed to `.eslintrc.json`.
 
-File: worker.py
-Line: 6
+## docker-compose.yaml
+- **frontend.depends_on**: Used list syntax (`- api:`) instead of map syntax (`api:`), causing a YAML parse error and the `condition: service_healthy` to be ignored. Fixed to proper map syntax.
+- **redis service**: Missing `command` to start Redis with password auth (`--requirepass`). Without it, the `redis-cli -a` healthcheck always fails and authenticated clients are rejected.
+- **api service**: Missing `QUEUE_NAME` environment variable. The API uses `QUEUE_NAME` to push jobs; without it the env var is undefined inside the container.
+- **api healthcheck**: Used `curl` which is not present in the `python:3.12-slim-bookworm` image. Replaced with a Python `urllib.request` one-liner.
 
-Issue:
-Redis connection used "localhost", which fails in Docker environment.
+## .env.example
+- **REDIS_PASSWORD**: Contained a real password value (`supersecretpassword123`). Replaced with placeholder `your_redis_password_here`.
+- **Missing variables**: `API_URL` and `PORT` were used by the frontend service but absent from `.env.example`. Added both.
 
-Fix:
-Replaced with environment variables using os.getenv and default service name "redis".
+## frontend/Dockerfile
+- **Line 7**: `npm ci --omit=dev` fails on two counts: `--omit` flag not supported by the npm version bundled in `node:18-alpine`, and `npm ci` requires a `package-lock.json` which is absent. Changed to `npm install --only=production`.
 
-File: worker.py
-Line: 15
+## api/conftest.py (new file)
+- **Missing**: No `conftest.py` existed, so `import main` in `tests/test_api.py` raised `ModuleNotFoundError` when pytest was invoked from any directory other than `api/`. Added `conftest.py` that inserts the `api/` directory into `sys.path`.
 
-Issue:
-Hardcoded queue name "job" may not match API queue.
+## .github/workflows/pipeline.yml
+- **Line 16**: `action/setup-python` (typo — missing `s`). Corrected to `actions/setup-python@v4`. This caused the lint and test jobs to fail immediately.
+- **Line 44**: Same `action/setup-python` typo in the test job.
+- **build job**: Incomplete — no Docker build/push steps. Added full multi-image build with SHA and `latest` tags pushed to a local registry service container.
+- **Missing jobs**: `security-scan`, `integration-test`, and `deploy` jobs were entirely absent. Added all three with correct `needs:` ordering to enforce `lint → test → build → security-scan → integration-test → deploy`.
+- **hadolint step**: Missing `dockerfile:` input, so it only linted the default `Dockerfile` path. Added separate steps for all three Dockerfiles.
 
-Fix:
-Replaced with environment variable QUEUE_NAME.
-
-File: worker.py
-Line: 13
-
-Issue:
-Infinite loop without signal handling prevents graceful shutdown.
-
-Fix:
-Added SIGTERM and SIGINT handlers to allow clean container shutdown.
-
-File: worker.py
-Line: 18
-
-Issue:
-Manual decoding of Redis response using .decode().
-
-Fix:
-Enabled decode_responses=True in Redis client.
-
-File: frontend/index.js
-Line: 6
-
-Issue:
-Hardcoded API URL "localhost" breaks communication in Docker environment.
-
-Fix:
-Replaced with environment variable API_URL and default service name "api".
-
-File: frontend/index.js
-Line: 11, 20
-
-Issue:
-Axios requests had no timeout, causing potential hanging requests.
-
-Fix:
-Added timeout option to all axios requests.
-
-File: frontend/index.js
-Line: 13, 22
-
-Issue:
-Errors were swallowed without logging or useful feedback.
-
-Fix:
-Logged error message and returned meaningful response.
-
-File: frontend/index.js
-
-Issue:
-No health endpoint for container health checks.
-
-Fix:
-Added /health route returning status OK.
-
-File: frontend/index.js
-Line: 27
-
-Issue:
-Port was hardcoded, reducing flexibility.
-
-Fix:
-Replaced with environment variable PORT.
-## With Copilot
-Changes Applied:
-Environment Variables (Line 13-14):
-
-Replaced hardcoded localhost:6379 with REDIS_HOST and REDIS_PORT from environment variables with fallbacks
-Redis Connection Validation (Line 17-22):
-
-Added try/catch to validate Redis connection on startup
-Logs connection success and fails gracefully if Redis unavailable
-Logging (Line 8-10):
-
-Added structured logging throughout the application
-Health Check Error Handling (Line 33-39):
-
-Added try/catch with proper error responses and status codes
-Create Job Error Handling (Line 41-50):
-
-Added try/catch for Redis operations
-Returns 500 status if job creation fails
-Get Job Error Handling (Line 52-62):
-
-Added try/catch for Redis operations
-Returns 404 for not found, 500 for errors
-Application Lifecycle (Line 25-28):
-
-Added lifespan context manager for proper startup/shutdown logging
-Pinned Dependencies in api/requirements.txt:
-
-fastapi==0.104.1
-uvicorn==0.24.0
-redis==5.0.1
-The application now safely handles Docker deployments by reading configuration from environment variables, validates dependencies on startup, and provides comprehensive error handling and logging.
-
-Claude Haiku 4.5 • 1x
+## README.md
+- File contained only the repo name. Added prerequisites, startup commands, environment variable reference, and description of a successful startup.

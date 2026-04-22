@@ -28,6 +28,7 @@ RUN useradd --no-create-home --shell /bin/false appuser \
 USER appuser
 
 # Healthcheck
-HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \ CMD python -c "import redis, os; r = redis.Redis(host=os.environ['REDIS_HOST'], port=int(os.environ.get('REDIS_PORT', 6379)), password=os.environ['REDIS_PASSWORD']); r.ping()"
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \ 
+    CMD python -c "import redis, os; r = redis.Redis(host=os.environ['REDIS_HOST'], port=int(os.environ.get('REDIS_PORT', 6379)), password=os.environ['REDIS_PASSWORD']); r.ping()"
 
 CMD ["python", "worker.py"]
