@@ -1,0 +1,81 @@
+version: "3.8"
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      
+    depends_on:
+      - condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+  api:
+    build: ./api
+    container_name: api
+    restart: always
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - APP_URL=${APP_URL}
+    networks:
+      - app-network
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+  worker:
+    build: ./worker
+    container_name: worker
+    restart: always
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - QUEUE_NAME=${QUEUE_NAME}
+    networks:
+      - app-network
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "python", "-c", "import redis,os; r=redis.Redis(host=os.environ['REDIS_HOST'], port=int(os.environ['REDIS_PORT']), password=os.environ['REDIS_PASSWORD']); r.ping()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5  
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - API_URL=${API_URL}
+      - PORT=${PORT}
+    depends_on:
+      - api
+networks:
+  app-network:
+    driver: bridge
