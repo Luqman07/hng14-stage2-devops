@@ -33,7 +33,7 @@ jobs:
         working-directory: frontend
 
       - name: Lint Frontend code
-        run: npx eslint .
+        run: npx eslint@8.40.0 .
         working-directory: frontend
 
       - name: Lint api Dockerfile
