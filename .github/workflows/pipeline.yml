@@ -169,12 +169,12 @@ jobs:
       - name: Create .env file
         run: |
           cat <<EOF > .env
-          REDIS_HOST=redis
-          REDIS_PORT=6379
-          REDIS_PASSWORD=testpassword
-          QUEUE_NAME=jobs
-          API_URL=http://api:8000
-          PORT=3000
+          REDIS_HOST=${{ secrets.REDIS_HOST }}
+          REDIS_PORT=${{ secrets.REDIS_PORT }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          QUEUE_NAME=${{ secrets.QUEUE_NAME }}
+          API_URL=${{ secrets.API_URL }}
+          PORT=${{ env.PORT }}
           EOF
 
       - name: Start stack
@@ -219,12 +219,12 @@ jobs:
       - name: Create .env file
         run: |
           cat <<EOF > .env
-          REDIS_HOST={{ secrets.REDIS_HOST }}
-          REDIS_PORT={{ secrets.REDIS_PORT }}
-          REDIS_PASSWORD={{ secrets.REDIS_PASSWORD }}
-          QUEUE_NAME={{ secrets.QUEUE_NAME }}
-          API_URL={{ secrets.API_URL }}
-          PORT={{ env.PORT }}
+          REDIS_HOST=${{ secrets.REDIS_HOST }}
+          REDIS_PORT=${{ secrets.REDIS_PORT }}
+          REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+          QUEUE_NAME=${{ secrets.QUEUE_NAME }}
+          API_URL=${{ secrets.API_URL }}
+          PORT=${{ env.PORT }}
           EOF
 
       - name: Rolling update
