@@ -148,29 +148,53 @@ jobs:
         run: trivy image --severity CRITICAL --format table localhost:5000/api:${{ github.sha }} || true
 
       - name: Scan API image
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost:5000/api:${{ github.sha }}
           format: sarif
           output: trivy-api.sarif
           severity: CRITICAL
+          exit-code: '0'
+
+      - name: Fail on API CRITICAL CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost:5000/api:${{ github.sha }}
+          format: table
+          severity: CRITICAL
           exit-code: '1'
 
       - name: Scan worker image
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost:5000/worker:${{ github.sha }}
           format: sarif
           output: trivy-worker.sarif
           severity: CRITICAL
+          exit-code: '0'
+
+      - name: Fail on worker CRITICAL CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost:5000/worker:${{ github.sha }}
+          format: table
+          severity: CRITICAL
           exit-code: '1'
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@v0.31.0
+        uses: aquasecurity/trivy-action@master
         with:
           image-ref: localhost:5000/frontend:${{ github.sha }}
           format: sarif
           output: trivy-frontend.sarif
+          severity: CRITICAL
+          exit-code: '0'
+
+      - name: Fail on frontend CRITICAL CVEs
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: localhost:5000/frontend:${{ github.sha }}
+          format: table
           severity: CRITICAL
           exit-code: '1'
 
