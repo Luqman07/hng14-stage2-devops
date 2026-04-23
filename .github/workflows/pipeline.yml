@@ -230,16 +230,9 @@ jobs:
       - name: Rolling update
         run: |
           set -e
-          docker compose up -d redis
-          for i in $(seq 1 12); do
-            HEALTH=$(docker inspect --format='{{.State.Health.Status}}' redis 2>/dev/null || echo "none")
-            if [ "$HEALTH" = "healthy" ]; then echo "redis healthy"; break; fi
-            if [ $i -eq 12 ]; then echo "redis failed health check"; exit 1; fi
-            sleep 5
-          done
           for SERVICE in api worker frontend; do
             docker compose build $SERVICE
-            docker compose up -d --no-deps $SERVICE
+            docker compose up -d $SERVICE
             for i in $(seq 1 12); do
               HEALTH=$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")
               if [ "$HEALTH" = "healthy" ]; then echo "$SERVICE healthy"; break; fi
