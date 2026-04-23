@@ -148,7 +148,7 @@ jobs:
         run: trivy image --severity CRITICAL --format table localhost:5000/api:${{ github.sha }} || true
 
       - name: Scan API image
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           image-ref: localhost:5000/api:${{ github.sha }}
           format: sarif
@@ -157,7 +157,7 @@ jobs:
           exit-code: '1'
 
       - name: Scan worker image
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           image-ref: localhost:5000/worker:${{ github.sha }}
           format: sarif
@@ -166,7 +166,7 @@ jobs:
           exit-code: '1'
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.30.0
+        uses: aquasecurity/trivy-action@v0.31.0
         with:
           image-ref: localhost:5000/frontend:${{ github.sha }}
           format: sarif
