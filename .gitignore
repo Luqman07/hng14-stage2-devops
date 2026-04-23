@@ -11,5 +11,4 @@ __pycache__
 *.pyc
 *.pyo
 venv/
-tests/
 requirements-dev.txt
