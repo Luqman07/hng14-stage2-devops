@@ -5,6 +5,7 @@ import os
 
 app = FastAPI()
 
+
 def get_redis():
     return redis.Redis(
         host=os.getenv("REDIS_HOST", "redis"),
@@ -13,14 +14,17 @@ def get_redis():
         decode_responses=True
     )
 
+
 r = get_redis()
 
 QUEUE_NAME = os.getenv("QUEUE_NAME", "jobs")
+
 
 @app.get("/health")
 def health_check():
     r.ping()  # Check if Redis is reachable
     return {"status": "healthy"}
+
 
 @app.post("/jobs")
 def create_job():
@@ -28,6 +32,7 @@ def create_job():
     r.lpush(QUEUE_NAME, job_id)
     r.hset(f"job:{job_id}", "status", "queued")
     return {"job_id": job_id}
+
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str):
