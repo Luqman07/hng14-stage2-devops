@@ -233,11 +233,15 @@ jobs:
           for SERVICE in api worker frontend; do
             docker compose build $SERVICE
             docker compose up -d $SERVICE
-            for i in $(seq 1 12); do
+            for i in $(seq 1 24); do
               HEALTH=$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")
               if [ "$HEALTH" = "healthy" ]; then echo "$SERVICE healthy"; break; fi
-              if [ $i -eq 12 ]; then
+              if [ "$HEALTH" = "unhealthy" ]; then
                 echo "$SERVICE failed health check — aborting rollout"
+                exit 1
+              fi
+              if [ $i -eq 24 ]; then
+                echo "$SERVICE timed out waiting for healthy"
                 exit 1
               fi
               sleep 5
