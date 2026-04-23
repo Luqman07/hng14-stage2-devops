@@ -136,9 +136,9 @@ jobs:
 
       - name: Rebuild images for scanning
         run: |
-          docker buildx build --load -t localhost:5000/api:${{ github.sha }} ./api
-          docker buildx build --load -t localhost:5000/worker:${{ github.sha }} ./worker
-          docker buildx build --load -t localhost:5000/frontend:${{ github.sha }} ./frontend
+          docker buildx build --no-cache --load -t localhost:5000/api:${{ github.sha }} ./api
+          docker buildx build --no-cache --load -t localhost:5000/worker:${{ github.sha }} ./worker
+          docker buildx build --no-cache --load -t localhost:5000/frontend:${{ github.sha }} ./frontend
 
       - name: Scan API image
         uses: aquasecurity/trivy-action@master
