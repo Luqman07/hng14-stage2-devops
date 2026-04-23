@@ -140,63 +140,18 @@ jobs:
           docker buildx build --no-cache --load -t localhost:5000/worker:${{ github.sha }} ./worker
           docker buildx build --no-cache --load -t localhost:5000/frontend:${{ github.sha }} ./frontend
 
-      - name: Install Trivy for debug scan
+      - name: Install Trivy
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Scan images
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-
-      - name: Scan API image (debug)
-        run: trivy image --severity CRITICAL --format table localhost:5000/api:${{ github.sha }} || true
-
-      - name: Scan API image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/api:${{ github.sha }}
-          format: sarif
-          output: trivy-api.sarif
-          severity: CRITICAL
-          exit-code: '0'
-
-      - name: Fail on API CRITICAL CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/api:${{ github.sha }}
-          format: table
-          severity: CRITICAL
-          exit-code: '1'
-
-      - name: Scan worker image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/worker:${{ github.sha }}
-          format: sarif
-          output: trivy-worker.sarif
-          severity: CRITICAL
-          exit-code: '0'
-
-      - name: Fail on worker CRITICAL CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/worker:${{ github.sha }}
-          format: table
-          severity: CRITICAL
-          exit-code: '1'
-
-      - name: Scan frontend image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/frontend:${{ github.sha }}
-          format: sarif
-          output: trivy-frontend.sarif
-          severity: CRITICAL
-          exit-code: '0'
-
-      - name: Fail on frontend CRITICAL CVEs
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/frontend:${{ github.sha }}
-          format: table
-          severity: CRITICAL
-          exit-code: '1'
+          for IMAGE in api worker frontend; do
+            trivy image --severity CRITICAL --format sarif \
+              --output trivy-${IMAGE}.sarif \
+              localhost:5000/${IMAGE}:${{ github.sha }}
+            trivy image --severity CRITICAL --format table --exit-code 1 \
+              localhost:5000/${IMAGE}:${{ github.sha }}
+          done
 
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
