@@ -140,6 +140,9 @@ jobs:
           docker buildx build --no-cache --load -t localhost:5000/worker:${{ github.sha }} ./worker
           docker buildx build --no-cache --load -t localhost:5000/frontend:${{ github.sha }} ./frontend
 
+      - name: Scan API image (debug)
+        run: trivy image --severity CRITICAL --format table localhost:5000/api:${{ github.sha }} || true
+
       - name: Scan API image
         uses: aquasecurity/trivy-action@master
         with:
