@@ -216,33 +216,30 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Rolling update
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+      - name: Create .env file
         run: |
-          echo "$DEPLOY_KEY" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
-          ssh -i /tmp/deploy_key \
-              -o StrictHostKeyChecking=no \
-              -o BatchMode=yes \
-              "$DEPLOY_USER@$DEPLOY_HOST" << 'ENDSSH'
-            set -e
-            cd ~/hng14-stage2-devops
-            git pull origin main
-            for SERVICE in api worker frontend; do
-              docker compose build $SERVICE
-              docker compose up -d --no-deps $SERVICE
-              for i in $(seq 1 12); do
-                HEALTH=$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")
-                if [ "$HEALTH" = "healthy" ]; then echo "$SERVICE healthy"; break; fi
-                if [ $i -eq 12 ]; then
-                  echo "$SERVICE failed health check — aborting rollout"
-                  exit 1
-                fi
-                sleep 5
-              done
+          cat <<EOF > .env
+          REDIS_HOST={{ secrets.REDIS_HOST }}
+          REDIS_PORT={{ secrets.REDIS_PORT }}
+          REDIS_PASSWORD={{ secrets.REDIS_PASSWORD }}
+          QUEUE_NAME={{ secrets.QUEUE_NAME }}
+          API_URL={{ secrets.API_URL }}
+          PORT={{ env.PORT }}
+          EOF
+
+      - name: Rolling update
+        run: |
+          set -e
+          for SERVICE in api worker frontend; do
+            docker compose build $SERVICE
+            docker compose up -d --no-deps $SERVICE
+            for i in $(seq 1 12); do
+              HEALTH=$(docker inspect --format='{{.State.Health.Status}}' $SERVICE 2>/dev/null || echo "none")
+              if [ "$HEALTH" = "healthy" ]; then echo "$SERVICE healthy"; break; fi
+              if [ $i -eq 12 ]; then
+                echo "$SERVICE failed health check — aborting rollout"
+                exit 1
+              fi
+              sleep 5
             done
-          ENDSSH
-          rm -f /tmp/deploy_key
+          done
